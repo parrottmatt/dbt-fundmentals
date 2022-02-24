@@ -1,27 +1,30 @@
-with customers as (
-    select * from {{ ref("stg_customers") }}
-),
-
-orders as (
-    select * from {{ ref("stg_orders") }}
+with orders as  (
+    select * from {{ ref('stg_orders' )}}
 ),
 
 payments as (
-    select * from {{ ref("stg_payments") }}
+    select * from {{ ref('stg_payments') }}
 ),
 
 order_payments as (
+    select
+        order_id,
+        sum(case when status = 'success' then amount end) as amount
+
+    from payments
+    group by 1
+),
+
+final as (
 
     select
-        customer_id,
-        order_id,
-        payments.amount
-    
+        orders.order_id,
+        orders.customer_id,
+        orders.order_date,
+        coalesce(order_payments.amount, 0) as amount
 
     from orders
-    left join payments on payments.orderid = order_id
-
+    left join order_payments using (order_id)
 )
 
-select * from order_payments
-order by customer_id
+select * from final
